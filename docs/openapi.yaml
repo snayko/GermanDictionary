@@ -1,0 +1,592 @@
+openapi: 3.0.3
+info:
+  title: German Dictionary API
+  description: |
+    REST API for German Dictionary application.
+    Provides CRUD operations for vocabulary words with cloud sync support.
+  version: 1.0.0
+  contact:
+    name: German Dictionary
+    
+servers:
+  - url: http://localhost:3001/api
+    description: Local development
+  - url: https://{your-app}.azurecontainerapps.io/api
+    description: Azure Container Apps production
+
+tags:
+  - name: Words
+    description: Vocabulary word operations
+  - name: Health
+    description: API health checks
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Check if the API is running and connected to database
+      operationId: healthCheck
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: API is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /words:
+    get:
+      tags:
+        - Words
+      summary: Get all words
+      description: Retrieve all vocabulary words, optionally filtered by search query
+      operationId: getWords
+      parameters:
+        - name: search
+          in: query
+          description: Search term to filter words (searches in german, translations, notes)
+          required: false
+          schema:
+            type: string
+        - name: wordType
+          in: query
+          description: Filter by word type
+          required: false
+          schema:
+            $ref: '#/components/schemas/WordType'
+        - name: level
+          in: query
+          description: Filter by difficulty level
+          required: false
+          schema:
+            $ref: '#/components/schemas/Level'
+        - name: limit
+          in: query
+          description: Maximum number of words to return
+          required: false
+          schema:
+            type: integer
+            default: 100
+            maximum: 1000
+        - name: offset
+          in: query
+          description: Number of words to skip (for pagination)
+          required: false
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of words
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WordListResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Words
+      summary: Create a new word
+      description: Add a new vocabulary word to the dictionary
+      operationId: createWord
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WordCreateRequest'
+      responses:
+        '201':
+          description: Word created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Word'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Word already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /words/{id}:
+    get:
+      tags:
+        - Words
+      summary: Get a word by ID
+      description: Retrieve a specific vocabulary word by its ID
+      operationId: getWordById
+      parameters:
+        - name: id
+          in: path
+          description: Word ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Word found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Word'
+        '404':
+          description: Word not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags:
+        - Words
+      summary: Update a word
+      description: Update an existing vocabulary word
+      operationId: updateWord
+      parameters:
+        - name: id
+          in: path
+          description: Word ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WordUpdateRequest'
+      responses:
+        '200':
+          description: Word updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Word'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Word not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - Words
+      summary: Delete a word
+      description: Delete a vocabulary word from the dictionary
+      operationId: deleteWord
+      parameters:
+        - name: id
+          in: path
+          description: Word ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Word deleted successfully
+        '404':
+          description: Word not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /words/sync:
+    post:
+      tags:
+        - Words
+      summary: Sync words (bulk upsert)
+      description: |
+        Sync multiple words at once. Used for initial sync or bulk updates.
+        Words are matched by ID - existing words are updated, new words are created.
+      operationId: syncWords
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncRequest'
+      responses:
+        '200':
+          description: Sync completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncResponse'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    WordType:
+      type: string
+      enum:
+        - noun
+        - verb
+        - adjective
+        - adverb
+        - preposition
+        - conjunction
+        - pronoun
+        - interjection
+        - phrase
+        - other
+      description: Type/part of speech of the word
+
+    Level:
+      type: string
+      enum:
+        - A1
+        - A2
+        - B1
+        - B2
+        - C1
+        - C2
+      description: CEFR difficulty level
+
+    Article:
+      type: string
+      enum:
+        - der
+        - die
+        - das
+      description: German article for nouns
+
+    Example:
+      type: object
+      properties:
+        german:
+          type: string
+          description: Example sentence in German
+          example: "Ich lese ein Buch."
+        translation:
+          type: string
+          description: Translation of the example
+          example: "I am reading a book."
+        source:
+          type: string
+          description: Source of the example (book, website, etc.)
+          example: "Goethe Institut"
+      required:
+        - german
+
+    Word:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        german:
+          type: string
+          description: The German word or phrase
+          example: "Buch"
+        article:
+          $ref: '#/components/schemas/Article'
+        wordType:
+          $ref: '#/components/schemas/WordType'
+        translationEN:
+          type: string
+          description: English translation
+          example: "book"
+        translationRU:
+          type: string
+          description: Russian translation
+          example: "книга"
+        translationUK:
+          type: string
+          description: Ukrainian translation
+          example: "книга"
+        level:
+          $ref: '#/components/schemas/Level'
+        examples:
+          type: array
+          items:
+            $ref: '#/components/schemas/Example'
+          description: Example sentences
+        synonyms:
+          type: array
+          items:
+            type: string
+          description: Synonym words
+          example: ["Werk", "Band"]
+        antonyms:
+          type: array
+          items:
+            type: string
+          description: Antonym words
+          example: []
+        collocations:
+          type: array
+          items:
+            type: string
+          description: Common word combinations
+          example: ["ein Buch lesen", "ein Buch schreiben"]
+        notes:
+          type: string
+          description: Additional notes
+          example: "Plural: Bücher"
+        imageUrl:
+          type: string
+          format: uri
+          description: URL to an image for the word
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+      required:
+        - id
+        - german
+        - wordType
+        - createdAt
+        - updatedAt
+
+    WordCreateRequest:
+      type: object
+      properties:
+        german:
+          type: string
+          description: The German word or phrase
+          minLength: 1
+          maxLength: 200
+        article:
+          $ref: '#/components/schemas/Article'
+        wordType:
+          $ref: '#/components/schemas/WordType'
+        translationEN:
+          type: string
+          maxLength: 500
+        translationRU:
+          type: string
+          maxLength: 500
+        translationUK:
+          type: string
+          maxLength: 500
+        level:
+          $ref: '#/components/schemas/Level'
+        examples:
+          type: array
+          items:
+            $ref: '#/components/schemas/Example'
+        synonyms:
+          type: array
+          items:
+            type: string
+        antonyms:
+          type: array
+          items:
+            type: string
+        collocations:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+          maxLength: 2000
+        imageUrl:
+          type: string
+          format: uri
+      required:
+        - german
+        - wordType
+
+    WordUpdateRequest:
+      type: object
+      properties:
+        german:
+          type: string
+          minLength: 1
+          maxLength: 200
+        article:
+          $ref: '#/components/schemas/Article'
+        wordType:
+          $ref: '#/components/schemas/WordType'
+        translationEN:
+          type: string
+          maxLength: 500
+        translationRU:
+          type: string
+          maxLength: 500
+        translationUK:
+          type: string
+          maxLength: 500
+        level:
+          $ref: '#/components/schemas/Level'
+        examples:
+          type: array
+          items:
+            $ref: '#/components/schemas/Example'
+        synonyms:
+          type: array
+          items:
+            type: string
+        antonyms:
+          type: array
+          items:
+            type: string
+        collocations:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+          maxLength: 2000
+        imageUrl:
+          type: string
+          format: uri
+
+    WordListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Word'
+        total:
+          type: integer
+          description: Total number of words matching the query
+        limit:
+          type: integer
+        offset:
+          type: integer
+      required:
+        - data
+        - total
+
+    SyncRequest:
+      type: object
+      properties:
+        words:
+          type: array
+          items:
+            $ref: '#/components/schemas/Word'
+          description: Words to sync (upsert)
+        lastSyncedAt:
+          type: string
+          format: date-time
+          description: Client's last sync timestamp (to get only newer changes)
+      required:
+        - words
+
+    SyncResponse:
+      type: object
+      properties:
+        synced:
+          type: integer
+          description: Number of words synced
+        serverWords:
+          type: array
+          items:
+            $ref: '#/components/schemas/Word'
+          description: Words from server that are newer than client's lastSyncedAt
+        syncedAt:
+          type: string
+          format: date-time
+          description: Server timestamp of this sync
+      required:
+        - synced
+        - serverWords
+        - syncedAt
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+        database:
+          type: string
+          enum: [connected, disconnected]
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - status
+        - database
+        - timestamp
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error type
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          description: Additional error details
+      required:
+        - error
+        - message
