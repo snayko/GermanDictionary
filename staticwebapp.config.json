@@ -1,7 +1,7 @@
 {
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/api/*", "/.auth/*", "/assets/*", "*.svg", "*.png", "*.ico", "*.json"]
+    "exclude": ["/.auth/*", "/assets/*", "*.svg", "*.png", "*.ico", "*.json"]
   },
   "routes": [
     {
@@ -23,10 +23,6 @@
     {
       "route": "/.auth/login/aad",
       "statusCode": 404
-    },
-    {
-      "route": "/api/*",
-      "allowedRoles": ["authenticated"]
     }
   ],
   "responseOverrides": {
@@ -38,7 +34,7 @@
   "globalHeaders": {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
-    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.azurestaticapps.net https://*.azurecontainer.io"
+    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.azurestaticapps.net https://*.azurecontainerapps.io https://germandictapi.redriver-c10d0b4e.germanywestcentral.azurecontainerapps.io"
   },
   "mimeTypes": {
     ".json": "application/json",

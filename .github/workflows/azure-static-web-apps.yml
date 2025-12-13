@@ -31,7 +31,7 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_API_URL: 'https://germandictapi.redriver-c10d0b4e.germanywestcentral.azurecontainerapps.io/api'
           VITE_ENABLE_SYNC: 'true'
 
       - name: Deploy to Azure Static Web Apps

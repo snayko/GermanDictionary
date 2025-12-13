@@ -6,6 +6,25 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 // ----------------------------------------------------------------------
 
+// SWA Auth types
+interface SwaClientPrincipal {
+  identityProvider: string;
+  userId: string;
+  userDetails: string;
+  userRoles: string[];
+  claims: { typ: string; val: string }[];
+}
+
+interface SwaAuthResponse {
+  clientPrincipal: SwaClientPrincipal | null;
+}
+
+// Cache for auth info
+let cachedAuthInfo: SwaClientPrincipal | null = null;
+let authFetchPromise: Promise<SwaClientPrincipal | null> | null = null;
+
+// ----------------------------------------------------------------------
+
 // API response types matching Go API
 interface ApiWord {
   id: string;
@@ -89,18 +108,61 @@ class ApiService {
     this.baseUrl = baseUrl;
   }
 
+  // Get SWA auth info (cached)
+  async getSwaAuth(): Promise<SwaClientPrincipal | null> {
+    if (cachedAuthInfo) return cachedAuthInfo;
+    if (authFetchPromise) return authFetchPromise;
+
+    authFetchPromise = (async () => {
+      try {
+        // Call SWA's auth endpoint (only works when hosted on SWA)
+        const response = await fetch('/.auth/me', { credentials: 'include' });
+        if (!response.ok) return null;
+        
+        const data: SwaAuthResponse = await response.json();
+        cachedAuthInfo = data.clientPrincipal;
+        return cachedAuthInfo;
+      } catch {
+        // Not running on SWA or auth not available
+        return null;
+      } finally {
+        authFetchPromise = null;
+      }
+    })();
+
+    return authFetchPromise;
+  }
+
+  // Clear cached auth (call on logout)
+  clearAuthCache(): void {
+    cachedAuthInfo = null;
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     
+    // Get SWA auth info and pass to API
+    const authInfo = await this.getSwaAuth();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(options.headers as Record<string, string>),
+    };
+
+    // If we have SWA auth, encode and send as header (mimics what SWA proxy does)
+    if (authInfo) {
+      const principalData = JSON.stringify({ clientPrincipal: authInfo });
+      headers['X-Ms-Client-Principal'] = btoa(principalData);
+      headers['X-Ms-Client-Principal-Id'] = authInfo.userId;
+      headers['X-Ms-Client-Principal-Name'] = authInfo.userDetails;
+      headers['X-Ms-Client-Principal-Idp'] = authInfo.identityProvider;
+    }
+
     const config: RequestInit = {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
       credentials: 'include',
     };
 
