@@ -1,0 +1,11 @@
+# Ignore node_modules and other non-deployable files
+node_modules/
+blog-reference/
+theme-reference/
+docs/
+src/
+public/
+*.ts
+*.tsx
+*.json
+!dist/**
