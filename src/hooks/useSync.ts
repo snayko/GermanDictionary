@@ -71,6 +71,11 @@ export function useSyncStatus() {
       return false;
     }
 
+    if (!currentUser) {
+      setSyncError('Please sign in to sync');
+      return false;
+    }
+
     setIsSyncing(true);
     setSyncError(null);
 
@@ -147,30 +152,30 @@ export function useSyncStatus() {
     } finally {
       setIsSyncing(false);
     }
-  }, [isOnline]);
+  }, [isOnline, currentUser]);
 
-  // Auto-sync on interval when online
+  // Auto-sync on interval when online and authenticated
   useEffect(() => {
-    if (!isOnline || !isApiAvailable || !SYNC_ENABLED) return;
+    if (!isOnline || !isApiAvailable || !SYNC_ENABLED || !currentUser) return;
 
     const interval = setInterval(() => {
       syncWithServer();
     }, SYNC_INTERVAL);
 
     return () => clearInterval(interval);
-  }, [isOnline, isApiAvailable, syncWithServer]);
+  }, [isOnline, isApiAvailable, currentUser, syncWithServer]);
 
   // Initial health check
   useEffect(() => {
     checkApiHealth();
   }, [checkApiHealth]);
 
-  // Initial sync when API becomes available
+  // Initial sync when API becomes available and user is authenticated
   useEffect(() => {
-    if (isApiAvailable && SYNC_ENABLED && !lastSyncedAt) {
+    if (isApiAvailable && SYNC_ENABLED && currentUser && !lastSyncedAt) {
       // First time - fetch all from server
       fetchFromServer();
-    } else if (isApiAvailable && SYNC_ENABLED) {
+    } else if (isApiAvailable && SYNC_ENABLED && currentUser) {
       // Subsequent - sync changes
       syncWithServer();
     }
@@ -184,6 +189,7 @@ export function useSyncStatus() {
     syncError,
     syncEnabled: SYNC_ENABLED,
     currentUser,
+    isAuthenticated: !!currentUser,
     syncWithServer,
     fetchFromServer,
     checkApiHealth,

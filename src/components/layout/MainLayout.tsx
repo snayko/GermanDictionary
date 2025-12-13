@@ -10,6 +10,7 @@ import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Chip from '@mui/material/Chip';
 import Tooltip from '@mui/material/Tooltip';
+import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import { Icon } from '@iconify/react';
 import { Logo } from '../logo';
@@ -28,7 +29,7 @@ const NAV_ITEMS = [
 export default function MainLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isOnline, isApiAvailable, isSyncing, syncEnabled, currentUser } = useSyncStatus();
+  const { isOnline, isApiAvailable, isSyncing, syncEnabled, currentUser, isAuthenticated } = useSyncStatus();
 
   const currentIndex = NAV_ITEMS.findIndex((item) => item.path === location.pathname);
   const [value, setValue] = useState(currentIndex >= 0 ? currentIndex : 0);
@@ -38,11 +39,21 @@ export default function MainLayout() {
     navigate(NAV_ITEMS[newValue].path);
   };
 
+  const handleLogin = () => {
+    // Redirect to Azure SWA login
+    window.location.href = '/.auth/login/github?post_login_redirect_uri=' + encodeURIComponent(window.location.pathname);
+  };
+
+  const handleLogout = () => {
+    window.location.href = '/.auth/logout?post_logout_redirect_uri=' + encodeURIComponent('/');
+  };
+
   const currentPage = NAV_ITEMS[value]?.label || 'German Dictionary';
 
   // Sync status info
   const getSyncStatus = () => {
     if (!syncEnabled) return { label: 'Local', color: 'default' as const, icon: 'solar:database-bold' };
+    if (!isAuthenticated) return { label: 'Sign In', color: 'warning' as const, icon: 'solar:user-circle-bold' };
     if (isSyncing) return { label: 'Syncing', color: 'info' as const, icon: 'solar:refresh-bold' };
     if (!isOnline) return { label: 'Offline', color: 'warning' as const, icon: 'solar:cloud-cross-bold' };
     if (!isApiAvailable) return { label: 'API Down', color: 'error' as const, icon: 'solar:server-square-cloud-bold' };
@@ -94,20 +105,40 @@ export default function MainLayout() {
               </Typography>
             </Box>
           </Stack>
-          {/* Sync Status Indicator */}
-          <Tooltip title={currentUser?.email ? `Signed in as ${currentUser.email}` : syncStatus.label}>
-            <Chip
+          {/* Sync Status / Auth */}
+          {syncEnabled && !isAuthenticated ? (
+            <Button
               size="small"
-              color={syncStatus.color}
-              icon={isSyncing ? <CircularProgress size={14} color="inherit" /> : <Icon icon={syncStatus.icon} width={16} />}
-              label={syncStatus.label}
+              variant="contained"
+              color="inherit"
+              onClick={handleLogin}
+              startIcon={<Icon icon="mdi:github" width={18} />}
               sx={{ 
-                height: 24,
-                fontSize: '0.7rem',
-                '& .MuiChip-icon': { ml: 0.5 },
+                height: 28,
+                fontSize: '0.75rem',
+                bgcolor: 'rgba(255,255,255,0.15)',
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.25)' },
               }}
-            />
-          </Tooltip>
+            >
+              Sign In
+            </Button>
+          ) : (
+            <Tooltip title={currentUser?.email ? `Signed in as ${currentUser.email} (click to sign out)` : syncStatus.label}>
+              <Chip
+                size="small"
+                color={syncStatus.color}
+                icon={isSyncing ? <CircularProgress size={14} color="inherit" /> : <Icon icon={syncStatus.icon} width={16} />}
+                label={syncStatus.label}
+                onClick={isAuthenticated ? handleLogout : undefined}
+                sx={{ 
+                  height: 24,
+                  fontSize: '0.7rem',
+                  cursor: isAuthenticated ? 'pointer' : 'default',
+                  '& .MuiChip-icon': { ml: 0.5 },
+                }}
+              />
+            </Tooltip>
+          )}
         </Toolbar>
       </AppBar>
 
