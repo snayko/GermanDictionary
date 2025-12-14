@@ -42,6 +42,15 @@ export function useSyncStatus() {
     }
 
     try {
+      // First check if user is authenticated via SWA
+      const swaAuth = await apiService.getSwaAuth();
+      if (!swaAuth) {
+        console.log('[Sync] Not authenticated via SWA, skipping API check');
+        setIsApiAvailable(false);
+        setCurrentUser(null);
+        return false;
+      }
+
       const health = await apiService.healthCheck();
       const available = health.status === 'healthy';
       setIsApiAvailable(available);
