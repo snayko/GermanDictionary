@@ -40,8 +40,8 @@ export default function MainLayout() {
   };
 
   const handleLogin = () => {
-    // Redirect to Azure SWA login
-    window.location.href = '/.auth/login/github?post_login_redirect_uri=' + encodeURIComponent(window.location.pathname);
+    // Redirect to Azure SWA Entra ID login
+    window.location.href = '/.auth/login/aad?post_login_redirect_uri=' + encodeURIComponent(window.location.pathname);
   };
 
   const handleLogout = () => {
@@ -112,7 +112,7 @@ export default function MainLayout() {
               variant="contained"
               color="inherit"
               onClick={handleLogin}
-              startIcon={<Icon icon="mdi:github" width={18} />}
+              startIcon={<Icon icon="mdi:microsoft" width={18} />}
               sx={{ 
                 height: 28,
                 fontSize: '0.75rem',
