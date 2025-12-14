@@ -55,7 +55,6 @@ export default function MainLayout() {
     apiService.clearAuthCache();
     window.location.href = '/.auth/logout?post_logout_redirect_uri=' + encodeURIComponent('/');
   };
-  };
 
   const currentPage = NAV_ITEMS[value]?.label || 'German Dictionary';
 
