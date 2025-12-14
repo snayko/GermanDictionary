@@ -100,6 +100,24 @@ export function useSyncStatus() {
       const localWords = await db.words.toArray();
       console.log('[Sync] Local words to sync:', localWords.length);
       
+      // If local DB is empty, fetch all words from server first
+      if (localWords.length === 0) {
+        console.log('[Sync] Local DB empty, fetching all words from server');
+        const response = await apiService.getWords({ limit: 1000 });
+        console.log('[Sync] Fetched', response.words.length, 'words from server');
+        
+        for (const apiWord of response.words) {
+          const localWord = apiWordToLocal(apiWord);
+          await db.words.put(localWord);
+        }
+        
+        const syncTime = new Date().toISOString();
+        localStorage.setItem(LAST_SYNC_KEY, syncTime);
+        setLastSyncedAt(syncTime);
+        setIsSyncing(false);
+        return true;
+      }
+      
       // Convert to API format
       const changes = localWords.map(word => localWordToApiSync(word));
       console.log('[Sync] Sending changes:', changes.length);

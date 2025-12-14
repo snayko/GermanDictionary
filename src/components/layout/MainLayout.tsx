@@ -20,7 +20,7 @@ import { apiService } from '../../services/api';
 // ----------------------------------------------------------------------
 
 // App version - update this when deploying
-const APP_VERSION = '1.0.3';
+const APP_VERSION = '1.0.4';
 
 const NAV_ITEMS = [
   { label: 'Dictionary', icon: 'solar:book-bold', path: '/' },
