@@ -75,7 +75,7 @@ export function useSyncStatus() {
 
   // Sync local words with server
   const syncWithServer = useCallback(async (): Promise<boolean> => {
-    console.log('[Sync] syncWithServer called', { isOnline, SYNC_ENABLED, currentUser: !!currentUser });
+    console.log('[Sync] syncWithServer called', { isOnline, SYNC_ENABLED });
     
     if (!isOnline || !SYNC_ENABLED) {
       console.log('[Sync] Skipping: offline or disabled');
@@ -83,11 +83,14 @@ export function useSyncStatus() {
       return false;
     }
 
-    if (!currentUser) {
-      console.log('[Sync] Skipping: no user');
+    // Check auth directly instead of relying on React state (avoids timing issues)
+    const swaAuth = await apiService.getSwaAuth();
+    if (!swaAuth) {
+      console.log('[Sync] Skipping: no SWA auth');
       setSyncError('Please sign in to sync');
       return false;
     }
+    console.log('[Sync] Authenticated as:', swaAuth.userDetails);
 
     setIsSyncing(true);
     setSyncError(null);
@@ -137,15 +140,26 @@ export function useSyncStatus() {
 
   // Fetch all words from server (initial load or full refresh)
   const fetchFromServer = useCallback(async (): Promise<boolean> => {
+    console.log('[Sync] fetchFromServer called', { isOnline, SYNC_ENABLED });
+    
     if (!isOnline || !SYNC_ENABLED) {
       return false;
     }
+
+    // Check auth directly
+    const swaAuth = await apiService.getSwaAuth();
+    if (!swaAuth) {
+      console.log('[Sync] fetchFromServer: no SWA auth');
+      return false;
+    }
+    console.log('[Sync] fetchFromServer: authenticated as', swaAuth.userDetails);
 
     setIsSyncing(true);
     setSyncError(null);
 
     try {
       const response = await apiService.getWords({ limit: 1000 });
+      console.log('[Sync] fetchFromServer: got', response.words.length, 'words from server');
       
       // Clear local DB and replace with server data
       await db.words.clear();
@@ -163,12 +177,13 @@ export function useSyncStatus() {
       return true;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch from server';
+      console.log('[Sync] fetchFromServer error:', message);
       setSyncError(message);
       return false;
     } finally {
       setIsSyncing(false);
     }
-  }, [isOnline, currentUser]);
+  }, [isOnline]);
 
   // Auto-sync on interval when online and authenticated
   useEffect(() => {
