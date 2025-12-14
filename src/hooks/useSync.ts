@@ -66,12 +66,16 @@ export function useSyncStatus() {
 
   // Sync local words with server
   const syncWithServer = useCallback(async (): Promise<boolean> => {
+    console.log('[Sync] syncWithServer called', { isOnline, SYNC_ENABLED, currentUser: !!currentUser });
+    
     if (!isOnline || !SYNC_ENABLED) {
+      console.log('[Sync] Skipping: offline or disabled');
       setSyncError('Sync is disabled or you are offline');
       return false;
     }
 
     if (!currentUser) {
+      console.log('[Sync] Skipping: no user');
       setSyncError('Please sign in to sync');
       return false;
     }
@@ -82,15 +86,18 @@ export function useSyncStatus() {
     try {
       // Get all local words that have been modified since last sync
       const localWords = await db.words.toArray();
+      console.log('[Sync] Local words to sync:', localWords.length);
       
       // Convert to API format
       const changes = localWords.map(word => localWordToApiSync(word));
+      console.log('[Sync] Sending changes:', changes.length);
 
       // Send to server for sync
       const response = await apiService.syncWords({
         lastSyncAt: lastSyncedAt || undefined,
         changes,
       });
+      console.log('[Sync] Server response:', response);
 
       // Update local database with server changes
       for (const serverWord of response.serverChanges) {

@@ -19,6 +19,9 @@ import { apiService } from '../../services/api';
 
 // ----------------------------------------------------------------------
 
+// App version - update this when deploying
+const APP_VERSION = '1.0.1';
+
 const NAV_ITEMS = [
   { label: 'Dictionary', icon: 'solar:book-bold', path: '/' },
   { label: 'Add Word', icon: 'solar:add-circle-bold', path: '/add' },
@@ -109,44 +112,64 @@ export default function MainLayout() {
                   textTransform: 'uppercase',
                 }}
               >
-                {currentPage}
+                {currentPage} • v{APP_VERSION}
               </Typography>
             </Box>
           </Stack>
-          {/* Sync Status / Auth */}
-          {syncEnabled && !isAuthenticated ? (
-            <Button
-              size="small"
-              variant="contained"
-              color="inherit"
-              onClick={handleLogin}
-              startIcon={<Icon icon="mdi:microsoft" width={18} />}
-              sx={{ 
-                height: 28,
-                fontSize: '0.75rem',
-                bgcolor: 'rgba(255,255,255,0.15)',
-                '&:hover': { bgcolor: 'rgba(255,255,255,0.25)' },
-              }}
-            >
-              Sign In
-            </Button>
-          ) : (
-            <Tooltip title={currentUser?.email ? `Signed in as ${currentUser.email} (click to sign out)` : syncStatus.label}>
-              <Chip
+          {/* User Info & Sync Status */}
+          <Stack direction="row" alignItems="center" spacing={1}>
+            {syncEnabled && !isAuthenticated ? (
+              <Button
                 size="small"
-                color={syncStatus.color}
-                icon={isSyncing ? <CircularProgress size={14} color="inherit" /> : <Icon icon={syncStatus.icon} width={16} />}
-                label={syncStatus.label}
-                onClick={isAuthenticated ? handleLogout : undefined}
+                variant="contained"
+                color="inherit"
+                onClick={handleLogin}
+                startIcon={<Icon icon="mdi:microsoft" width={18} />}
                 sx={{ 
-                  height: 24,
-                  fontSize: '0.7rem',
-                  cursor: isAuthenticated ? 'pointer' : 'default',
-                  '& .MuiChip-icon': { ml: 0.5 },
+                  height: 28,
+                  fontSize: '0.75rem',
+                  bgcolor: 'rgba(255,255,255,0.15)',
+                  '&:hover': { bgcolor: 'rgba(255,255,255,0.25)' },
                 }}
-              />
-            </Tooltip>
-          )}
+              >
+                Sign In
+              </Button>
+            ) : (
+              <>
+                {/* User email */}
+                {currentUser?.email && (
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.7rem' }}>
+                    {currentUser.email}
+                  </Typography>
+                )}
+                {/* Sync status chip - NOT clickable */}
+                <Tooltip title={syncStatus.label}>
+                  <Chip
+                    size="small"
+                    color={syncStatus.color}
+                    icon={isSyncing ? <CircularProgress size={14} color="inherit" /> : <Icon icon={syncStatus.icon} width={16} />}
+                    label={syncStatus.label}
+                    sx={{ 
+                      height: 24,
+                      fontSize: '0.7rem',
+                      '& .MuiChip-icon': { ml: 0.5 },
+                    }}
+                  />
+                </Tooltip>
+                {/* Logout button */}
+                <Tooltip title="Sign out">
+                  <Button
+                    size="small"
+                    color="inherit"
+                    onClick={handleLogout}
+                    sx={{ minWidth: 'auto', p: 0.5 }}
+                  >
+                    <Icon icon="solar:logout-2-bold" width={20} />
+                  </Button>
+                </Tooltip>
+              </>
+            )}
+          </Stack>
         </Toolbar>
       </AppBar>
 

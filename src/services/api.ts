@@ -19,10 +19,6 @@ interface SwaAuthResponse {
   clientPrincipal: SwaClientPrincipal | null;
 }
 
-// Cache for auth info
-let cachedAuthInfo: SwaClientPrincipal | null = null;
-let authFetchPromise: Promise<SwaClientPrincipal | null> | null = null;
-
 // ----------------------------------------------------------------------
 
 // API response types matching Go API
@@ -103,50 +99,33 @@ interface ApiUser {
 
 class ApiService {
   private baseUrl: string;
-  private authCheckedAt: number = 0;
-  private readonly AUTH_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
   }
 
-  // Get SWA auth info (cached, but refreshes periodically)
+  // Get SWA auth info - NO CACHING, always fetch fresh
   async getSwaAuth(): Promise<SwaClientPrincipal | null> {
-    const now = Date.now();
-    
-    // Return cached if valid and not expired
-    if (cachedAuthInfo && (now - this.authCheckedAt) < this.AUTH_CACHE_TTL) {
-      return cachedAuthInfo;
-    }
-    
-    // If we have an in-flight request, wait for it
-    if (authFetchPromise) return authFetchPromise;
-
-    authFetchPromise = (async () => {
-      try {
-        // Call SWA's auth endpoint (only works when hosted on SWA)
-        const response = await fetch('/.auth/me', { credentials: 'include' });
-        if (!response.ok) return null;
-        
-        const data: SwaAuthResponse = await response.json();
-        cachedAuthInfo = data.clientPrincipal;
-        this.authCheckedAt = Date.now();
-        return cachedAuthInfo;
-      } catch {
-        // Not running on SWA or auth not available
+    try {
+      console.log('[Auth] Fetching /.auth/me');
+      const response = await fetch('/.auth/me', { credentials: 'include' });
+      if (!response.ok) {
+        console.log('[Auth] /.auth/me failed:', response.status);
         return null;
-      } finally {
-        authFetchPromise = null;
       }
-    })();
-
-    return authFetchPromise;
+      
+      const data: SwaAuthResponse = await response.json();
+      console.log('[Auth] Got clientPrincipal:', data.clientPrincipal ? 'yes' : 'null');
+      return data.clientPrincipal;
+    } catch (err) {
+      console.log('[Auth] Error fetching /.auth/me:', err);
+      return null;
+    }
   }
 
-  // Clear cached auth (call on logout or to force refresh)
+  // Clear cached auth (no-op now, kept for compatibility)
   clearAuthCache(): void {
-    cachedAuthInfo = null;
-    this.authCheckedAt = 0;
+    // No caching anymore
   }
 
   private async request<T>(
