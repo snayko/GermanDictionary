@@ -103,14 +103,23 @@ interface ApiUser {
 
 class ApiService {
   private baseUrl: string;
+  private authCheckedAt: number = 0;
+  private readonly AUTH_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
   }
 
-  // Get SWA auth info (cached)
+  // Get SWA auth info (cached, but refreshes periodically)
   async getSwaAuth(): Promise<SwaClientPrincipal | null> {
-    if (cachedAuthInfo) return cachedAuthInfo;
+    const now = Date.now();
+    
+    // Return cached if valid and not expired
+    if (cachedAuthInfo && (now - this.authCheckedAt) < this.AUTH_CACHE_TTL) {
+      return cachedAuthInfo;
+    }
+    
+    // If we have an in-flight request, wait for it
     if (authFetchPromise) return authFetchPromise;
 
     authFetchPromise = (async () => {
@@ -121,6 +130,7 @@ class ApiService {
         
         const data: SwaAuthResponse = await response.json();
         cachedAuthInfo = data.clientPrincipal;
+        this.authCheckedAt = Date.now();
         return cachedAuthInfo;
       } catch {
         // Not running on SWA or auth not available
@@ -133,9 +143,10 @@ class ApiService {
     return authFetchPromise;
   }
 
-  // Clear cached auth (call on logout)
+  // Clear cached auth (call on logout or to force refresh)
   clearAuthCache(): void {
     cachedAuthInfo = null;
+    this.authCheckedAt = 0;
   }
 
   private async request<T>(

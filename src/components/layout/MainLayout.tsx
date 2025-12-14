@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import AppBar from '@mui/material/AppBar';
@@ -15,6 +15,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { Icon } from '@iconify/react';
 import { Logo } from '../logo';
 import { useSyncStatus } from '../../hooks/useSync';
+import { apiService } from '../../services/api';
 
 // ----------------------------------------------------------------------
 
@@ -29,10 +30,16 @@ const NAV_ITEMS = [
 export default function MainLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isOnline, isApiAvailable, isSyncing, syncEnabled, currentUser, isAuthenticated } = useSyncStatus();
+  const { isOnline, isApiAvailable, isSyncing, syncEnabled, currentUser, isAuthenticated, checkApiHealth } = useSyncStatus();
 
   const currentIndex = NAV_ITEMS.findIndex((item) => item.path === location.pathname);
   const [value, setValue] = useState(currentIndex >= 0 ? currentIndex : 0);
+
+  // Clear auth cache and recheck on page load (handles post-login redirect)
+  useEffect(() => {
+    apiService.clearAuthCache();
+    checkApiHealth();
+  }, []);
 
   const handleNavChange = (_event: React.SyntheticEvent, newValue: number) => {
     setValue(newValue);
@@ -45,7 +52,9 @@ export default function MainLayout() {
   };
 
   const handleLogout = () => {
+    apiService.clearAuthCache();
     window.location.href = '/.auth/logout?post_logout_redirect_uri=' + encodeURIComponent('/');
+  };
   };
 
   const currentPage = NAV_ITEMS[value]?.label || 'German Dictionary';
