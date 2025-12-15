@@ -6,9 +6,15 @@ import type { Word, WordFormData, Translation, TranslationLanguage, Example } fr
 
 // ----------------------------------------------------------------------
 
-export function useWords() {
+interface UseWordsOptions {
+  onWordChanged?: (wordId: string) => Promise<void>;
+}
+
+export function useWords(options?: UseWordsOptions) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  const { onWordChanged } = options || {};
 
   // Live query for all words
   const words = useLiveQuery(() => db.words.orderBy('updatedAt').reverse().toArray(), []);
@@ -109,6 +115,12 @@ export function useWords() {
       };
 
       await db.words.add(newWord);
+      
+      // Sync to server if callback provided
+      if (onWordChanged) {
+        onWordChanged(newWord.id).catch(console.error);
+      }
+      
       return newWord;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to add word';
@@ -117,7 +129,7 @@ export function useWords() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [onWordChanged]);
 
   // Update an existing word
   const updateWord = useCallback(async (id: string, formData: WordFormData): Promise<Word> => {
@@ -147,6 +159,12 @@ export function useWords() {
       };
 
       await db.words.put(updatedWord);
+      
+      // Sync to server if callback provided
+      if (onWordChanged) {
+        onWordChanged(updatedWord.id).catch(console.error);
+      }
+      
       return updatedWord;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update word';
@@ -155,7 +173,7 @@ export function useWords() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [onWordChanged]);
 
   // Delete a word
   const deleteWord = useCallback(async (id: string): Promise<void> => {
@@ -166,6 +184,11 @@ export function useWords() {
       await db.words.delete(id);
       // Also delete associated review data
       await db.reviews.delete(id);
+      
+      // Sync deletion to server if callback provided
+      if (onWordChanged) {
+        onWordChanged(id).catch(console.error);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete word';
       setError(message);
@@ -173,7 +196,7 @@ export function useWords() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [onWordChanged]);
 
   // Get a single word by ID
   const getWord = useCallback(async (id: string): Promise<Word | undefined> => {

@@ -22,7 +22,7 @@ import { Icon } from '@iconify/react';
 import { useSnackbar } from 'notistack';
 import debounce from 'lodash/debounce';
 
-import { useWords } from '../hooks/useWords';
+import { useSyncedWords } from '../hooks/useSyncedWords';
 import type { Word } from '../types';
 
 // ----------------------------------------------------------------------
@@ -30,7 +30,7 @@ import type { Word } from '../types';
 export default function DictionaryPage() {
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
-  const { words, deleteWord, searchWords } = useWords();
+  const { words, deleteWord, searchWords } = useSyncedWords();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredWords, setFilteredWords] = useState<Word[]>([]);

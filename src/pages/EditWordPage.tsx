@@ -12,7 +12,7 @@ import { Icon } from '@iconify/react';
 import { useSnackbar } from 'notistack';
 
 import WordNewEditForm from '../components/words/WordNewEditForm';
-import { useWords } from '../hooks/useWords';
+import { useSyncedWords } from '../hooks/useSyncedWords';
 import { useResponsive } from '../hooks/useResponsive';
 import type { Word, WordFormData } from '../types';
 
@@ -22,7 +22,7 @@ export default function EditWordPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
-  const { getWord, updateWord } = useWords();
+  const { getWord, updateWord } = useSyncedWords();
   const mdUp = useResponsive('up', 'md');
 
   const [word, setWord] = useState<Word | null>(null);

@@ -4,24 +4,24 @@ import { db } from '../db';
 
 // ----------------------------------------------------------------------
 
-const SYNC_INTERVAL = 30000; // 30 seconds
 const LAST_SYNC_KEY = 'germandict_last_sync';
 const SYNC_ENABLED = import.meta.env.VITE_ENABLE_SYNC === 'true';
-
-// Prevent multiple simultaneous syncs
-let isSyncInProgress = false;
 
 // ----------------------------------------------------------------------
 
 export function useSyncStatus() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [isApiAvailable, setIsApiAvailable] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(
     localStorage.getItem(LAST_SYNC_KEY)
   );
   const [syncError, setSyncError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<{ email?: string; displayName?: string } | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+  // Prevent multiple simultaneous syncs
+  const isSyncInProgress = useRef(false);
+  const hasInitialized = useRef(false);
 
   // Check online status
   useEffect(() => {
@@ -37,121 +37,142 @@ export function useSyncStatus() {
     };
   }, []);
 
-  // Check if API is available and get user info
-  const checkApiHealth = useCallback(async () => {
-    if (!isOnline || !SYNC_ENABLED) {
-      setIsApiAvailable(false);
-      return false;
-    }
+  // Check auth and load initial data - ONCE on mount
+  useEffect(() => {
+    if (hasInitialized.current || !SYNC_ENABLED) return;
+    hasInitialized.current = true;
 
-    try {
-      // First check if user is authenticated via SWA
+    const initialize = async () => {
+      // Check if user is authenticated via SWA
       const swaAuth = await apiService.getSwaAuth();
       if (!swaAuth) {
-        console.log('[Sync] Not authenticated via SWA, skipping API check');
-        setIsApiAvailable(false);
+        setIsAuthenticated(false);
         setCurrentUser(null);
-        return false;
+        return;
       }
 
-      const health = await apiService.healthCheck();
-      const available = health.status === 'healthy';
-      setIsApiAvailable(available);
+      setIsAuthenticated(true);
+      setCurrentUser({ 
+        email: swaAuth.userDetails, 
+        displayName: swaAuth.userDetails 
+      });
 
-      // If API is available, get user info
-      if (available) {
+      // Load words from server if local DB is empty
+      const localWords = await db.words.toArray();
+      if (localWords.length === 0) {
+        setIsSyncing(true);
         try {
-          const user = await apiService.getMe();
-          setCurrentUser({ email: user.email, displayName: user.displayName });
-        } catch {
-          // User might not be authenticated yet
-          setCurrentUser(null);
+          const response = await apiService.getWords({ limit: 1000 });
+          for (const apiWord of response.words) {
+            await db.words.put(apiWordToLocal(apiWord));
+          }
+          const syncTime = new Date().toISOString();
+          localStorage.setItem(LAST_SYNC_KEY, syncTime);
+          setLastSyncedAt(syncTime);
+        } catch (err) {
+          console.error('[Sync] Failed to fetch initial words:', err);
+          setSyncError('Failed to load words from server');
+        } finally {
+          setIsSyncing(false);
         }
       }
+    };
 
-      return available;
-    } catch {
-      setIsApiAvailable(false);
-      return false;
-    }
-  }, [isOnline]);
+    initialize();
+  }, []);
 
-  // Sync local words with server
-  const syncWithServer = useCallback(async (): Promise<boolean> => {
-    // Prevent multiple simultaneous syncs
-    if (isSyncInProgress) {
-      console.log('[Sync] Already syncing, skipping');
+  // Sync a single word to server (call this when user adds/edits/deletes)
+  const syncWord = useCallback(async (wordId: string): Promise<boolean> => {
+    if (!isOnline || !SYNC_ENABLED || !isAuthenticated) {
       return false;
     }
 
-    console.log('[Sync] syncWithServer called', { isOnline, SYNC_ENABLED });
-    
-    if (!isOnline || !SYNC_ENABLED) {
-      console.log('[Sync] Skipping: offline or disabled');
-      setSyncError('Sync is disabled or you are offline');
+    if (isSyncInProgress.current) {
       return false;
     }
 
-    // Check auth directly instead of relying on React state (avoids timing issues)
-    const swaAuth = await apiService.getSwaAuth();
-    if (!swaAuth) {
-      console.log('[Sync] Skipping: no SWA auth');
-      setSyncError('Please sign in to sync');
-      return false;
-    }
-    console.log('[Sync] Authenticated as:', swaAuth.userDetails);
-
-    isSyncInProgress = true;
+    isSyncInProgress.current = true;
     setIsSyncing(true);
     setSyncError(null);
 
     try {
-      // Get all local words that have been modified since last sync
-      const localWords = await db.words.toArray();
-      console.log('[Sync] Local words to sync:', localWords.length);
-      
-      // If local DB is empty, fetch all words from server first
-      if (localWords.length === 0) {
-        console.log('[Sync] Local DB empty, fetching all words from server');
-        const response = await apiService.getWords({ limit: 1000 });
-        console.log('[Sync] Fetched', response.words.length, 'words from server');
-        
-        for (const apiWord of response.words) {
-          const localWord = apiWordToLocal(apiWord);
-          await db.words.put(localWord);
-        }
-        
-        const syncTime = new Date().toISOString();
+      const word = await db.words.get(wordId);
+      if (!word) {
+        // Word was deleted - sync deletion
+        const response = await apiService.syncWords({
+          lastSyncAt: lastSyncedAt || undefined,
+          changes: [{
+            id: wordId,
+            german: '',
+            wordType: '',
+            translations: {},
+            clientUpdatedAt: new Date().toISOString(),
+            isDeleted: true,
+          }],
+        });
+        const syncTime = response.syncedAt;
         localStorage.setItem(LAST_SYNC_KEY, syncTime);
         setLastSyncedAt(syncTime);
-        setIsSyncing(false);
-        return true;
+      } else {
+        // Sync the word
+        const response = await apiService.syncWords({
+          lastSyncAt: lastSyncedAt || undefined,
+          changes: [localWordToApiSync(word)],
+        });
+        const syncTime = response.syncedAt;
+        localStorage.setItem(LAST_SYNC_KEY, syncTime);
+        setLastSyncedAt(syncTime);
       }
-      
-      // Convert to API format
-      const changes = localWords.map(word => localWordToApiSync(word));
-      console.log('[Sync] Sending changes:', changes.length);
+      return true;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Sync failed';
+      console.error('[Sync] Error:', message);
+      setSyncError(message);
+      return false;
+    } finally {
+      isSyncInProgress.current = false;
+      setIsSyncing(false);
+    }
+  }, [isOnline, isAuthenticated, lastSyncedAt]);
 
-      // Send to server for sync
+  // Full sync - sync all local words to server
+  const syncAllWords = useCallback(async (): Promise<boolean> => {
+    if (!isOnline || !SYNC_ENABLED || !isAuthenticated) {
+      setSyncError('Cannot sync: offline or not authenticated');
+      return false;
+    }
+
+    if (isSyncInProgress.current) {
+      return false;
+    }
+
+    isSyncInProgress.current = true;
+    setIsSyncing(true);
+    setSyncError(null);
+
+    try {
+      const localWords = await db.words.toArray();
+      if (localWords.length === 0) {
+        return true; // Nothing to sync
+      }
+
+      const changes = localWords.map(word => localWordToApiSync(word));
       const response = await apiService.syncWords({
         lastSyncAt: lastSyncedAt || undefined,
         changes,
       });
-      console.log('[Sync] Server response:', response);
 
-      // Update local database with server changes
+      // Update local DB with any server changes
       for (const serverWord of response.serverChanges) {
-        const localWord = apiWordToLocal(serverWord);
-        await db.words.put(localWord);
+        await db.words.put(apiWordToLocal(serverWord));
       }
 
-      // Remove deleted words from local DB
+      // Remove deleted words
       for (const deletedId of response.deletedIds) {
         await db.words.delete(deletedId);
         await db.reviews.delete(deletedId);
       }
 
-      // Update last synced timestamp
       const syncTime = response.syncedAt;
       localStorage.setItem(LAST_SYNC_KEY, syncTime);
       setLastSyncedAt(syncTime);
@@ -159,46 +180,34 @@ export function useSyncStatus() {
       return true;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Sync failed';
+      console.error('[Sync] Error:', message);
       setSyncError(message);
       return false;
     } finally {
-      isSyncInProgress = false;
+      isSyncInProgress.current = false;
       setIsSyncing(false);
     }
-  }, [isOnline, lastSyncedAt]);
+  }, [isOnline, isAuthenticated, lastSyncedAt]);
 
-  // Fetch all words from server (initial load or full refresh)
+  // Fetch all words from server (full refresh)
   const fetchFromServer = useCallback(async (): Promise<boolean> => {
-    console.log('[Sync] fetchFromServer called', { isOnline, SYNC_ENABLED });
-    
-    if (!isOnline || !SYNC_ENABLED) {
+    if (!isOnline || !SYNC_ENABLED || !isAuthenticated) {
       return false;
     }
-
-    // Check auth directly
-    const swaAuth = await apiService.getSwaAuth();
-    if (!swaAuth) {
-      console.log('[Sync] fetchFromServer: no SWA auth');
-      return false;
-    }
-    console.log('[Sync] fetchFromServer: authenticated as', swaAuth.userDetails);
 
     setIsSyncing(true);
     setSyncError(null);
 
     try {
       const response = await apiService.getWords({ limit: 1000 });
-      console.log('[Sync] fetchFromServer: got', response.words.length, 'words from server');
       
       // Clear local DB and replace with server data
       await db.words.clear();
       
       for (const apiWord of response.words) {
-        const localWord = apiWordToLocal(apiWord);
-        await db.words.put(localWord);
+        await db.words.put(apiWordToLocal(apiWord));
       }
 
-      // Update last synced timestamp
       const syncTime = new Date().toISOString();
       localStorage.setItem(LAST_SYNC_KEY, syncTime);
       setLastSyncedAt(syncTime);
@@ -206,55 +215,24 @@ export function useSyncStatus() {
       return true;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch from server';
-      console.log('[Sync] fetchFromServer error:', message);
+      console.error('[Sync] Error:', message);
       setSyncError(message);
       return false;
     } finally {
       setIsSyncing(false);
     }
-  }, [isOnline]);
-
-  // Auto-sync on interval when online and authenticated
-  useEffect(() => {
-    if (!isOnline || !isApiAvailable || !SYNC_ENABLED || !currentUser) return;
-
-    const interval = setInterval(() => {
-      syncWithServer();
-    }, SYNC_INTERVAL);
-
-    return () => clearInterval(interval);
-  }, [isOnline, isApiAvailable, currentUser, syncWithServer]);
-
-  // Initial health check - only once on mount
-  const hasInitialized = useRef(false);
-  useEffect(() => {
-    if (!hasInitialized.current) {
-      hasInitialized.current = true;
-      checkApiHealth();
-    }
-  }, [checkApiHealth]);
-
-  // Initial sync when API becomes available - only once
-  const hasSynced = useRef(false);
-  useEffect(() => {
-    if (isApiAvailable && SYNC_ENABLED && !hasSynced.current) {
-      hasSynced.current = true;
-      // Always sync when first available - syncWithServer handles empty DB case
-      syncWithServer();
-    }
-  }, [isApiAvailable, syncWithServer]);
+  }, [isOnline, isAuthenticated]);
 
   return {
     isOnline,
-    isApiAvailable,
     isSyncing,
     lastSyncedAt,
     syncError,
     syncEnabled: SYNC_ENABLED,
     currentUser,
-    isAuthenticated: !!currentUser,
-    syncWithServer,
-    fetchFromServer,
-    checkApiHealth,
+    isAuthenticated,
+    syncWord,        // Sync single word (call after add/edit/delete)
+    syncAllWords,    // Sync all words (manual full sync)
+    fetchFromServer, // Fetch all from server (refresh)
   };
 }

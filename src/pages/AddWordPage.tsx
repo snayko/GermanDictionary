@@ -4,7 +4,7 @@ import Typography from '@mui/material/Typography';
 import { useSnackbar } from 'notistack';
 
 import WordNewEditForm from '../components/words/WordNewEditForm';
-import { useWords } from '../hooks/useWords';
+import { useSyncedWords } from '../hooks/useSyncedWords';
 import type { WordFormData } from '../types';
 
 // ----------------------------------------------------------------------
@@ -12,7 +12,7 @@ import type { WordFormData } from '../types';
 export default function AddWordPage() {
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
-  const { addWord } = useWords();
+  const { addWord } = useSyncedWords();
 
   const handleSubmit = async (data: WordFormData) => {
     try {

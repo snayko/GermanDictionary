@@ -20,7 +20,7 @@ import { apiService } from '../../services/api';
 // ----------------------------------------------------------------------
 
 // App version - update this when deploying
-const APP_VERSION = '1.0.6';
+const APP_VERSION = '1.0.7';
 
 const NAV_ITEMS = [
   { label: 'Dictionary', icon: 'solar:book-bold', path: '/' },
@@ -33,7 +33,7 @@ const NAV_ITEMS = [
 export default function MainLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isOnline, isApiAvailable, isSyncing, syncEnabled, currentUser, isAuthenticated, checkApiHealth } = useSyncStatus();
+  const { isOnline, isSyncing, syncEnabled, currentUser, isAuthenticated } = useSyncStatus();
 
   const currentIndex = NAV_ITEMS.findIndex((item) => item.path === location.pathname);
   const [value, setValue] = useState(currentIndex >= 0 ? currentIndex : 0);
@@ -41,7 +41,6 @@ export default function MainLayout() {
   // Clear auth cache and recheck on page load (handles post-login redirect)
   useEffect(() => {
     apiService.clearAuthCache();
-    checkApiHealth();
   }, []);
 
   const handleNavChange = (_event: React.SyntheticEvent, newValue: number) => {
@@ -67,7 +66,7 @@ export default function MainLayout() {
     if (!isAuthenticated) return { label: 'Sign In', color: 'warning' as const, icon: 'solar:user-circle-bold' };
     if (isSyncing) return { label: 'Syncing', color: 'info' as const, icon: 'solar:refresh-bold' };
     if (!isOnline) return { label: 'Offline', color: 'warning' as const, icon: 'solar:cloud-cross-bold' };
-    if (!isApiAvailable) return { label: 'API Down', color: 'error' as const, icon: 'solar:server-square-cloud-bold' };
+    // API health is not checked in this version
     return { label: 'Synced', color: 'success' as const, icon: 'solar:cloud-check-bold' };
   };
 

@@ -116,20 +116,16 @@ class ApiService {
     }
 
     try {
-      console.log('[Auth] Fetching /.auth/me (once per session)');
       const response = await fetch('/.auth/me', { credentials: 'include' });
       if (!response.ok) {
-        console.log('[Auth] /.auth/me failed:', response.status);
         cachedAuthPrincipal = null;
         return null;
       }
       
       const data: SwaAuthResponse = await response.json();
-      console.log('[Auth] Got clientPrincipal:', data.clientPrincipal ? data.clientPrincipal.userDetails : 'null');
       cachedAuthPrincipal = data.clientPrincipal;
       return cachedAuthPrincipal;
-    } catch (err) {
-      console.log('[Auth] Error fetching /.auth/me:', err);
+    } catch {
       cachedAuthPrincipal = null;
       return null;
     }
