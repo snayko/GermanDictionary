@@ -97,9 +97,9 @@ interface ApiUser {
 
 // ----------------------------------------------------------------------
 
-// Auth cache - cache for 10 seconds to avoid repeated calls
-let authCache: { principal: SwaClientPrincipal | null; timestamp: number } | null = null;
-const AUTH_CACHE_TTL = 10000; // 10 seconds
+// Auth cache - cached for entire browser session (until page reload or logout)
+// Azure SWA manages the actual session via HttpOnly cookie (8 hours default)
+let cachedAuthPrincipal: SwaClientPrincipal | null | undefined = undefined; // undefined = not fetched yet
 
 class ApiService {
   private baseUrl: string;
@@ -108,36 +108,36 @@ class ApiService {
     this.baseUrl = baseUrl;
   }
 
-  // Get SWA auth info - cached for 10 seconds
+  // Get SWA auth info - fetched once per page load, then cached
   async getSwaAuth(): Promise<SwaClientPrincipal | null> {
-    // Return cached value if still valid
-    if (authCache && Date.now() - authCache.timestamp < AUTH_CACHE_TTL) {
-      return authCache.principal;
+    // Return cached value if we've already fetched
+    if (cachedAuthPrincipal !== undefined) {
+      return cachedAuthPrincipal;
     }
 
     try {
-      console.log('[Auth] Fetching /.auth/me');
+      console.log('[Auth] Fetching /.auth/me (once per session)');
       const response = await fetch('/.auth/me', { credentials: 'include' });
       if (!response.ok) {
         console.log('[Auth] /.auth/me failed:', response.status);
-        authCache = { principal: null, timestamp: Date.now() };
+        cachedAuthPrincipal = null;
         return null;
       }
       
       const data: SwaAuthResponse = await response.json();
-      console.log('[Auth] Got clientPrincipal:', data.clientPrincipal ? 'yes' : 'null');
-      authCache = { principal: data.clientPrincipal, timestamp: Date.now() };
-      return data.clientPrincipal;
+      console.log('[Auth] Got clientPrincipal:', data.clientPrincipal ? data.clientPrincipal.userDetails : 'null');
+      cachedAuthPrincipal = data.clientPrincipal;
+      return cachedAuthPrincipal;
     } catch (err) {
       console.log('[Auth] Error fetching /.auth/me:', err);
-      authCache = { principal: null, timestamp: Date.now() };
+      cachedAuthPrincipal = null;
       return null;
     }
   }
 
-  // Clear cached auth
+  // Clear cached auth (call on logout)
   clearAuthCache(): void {
-    authCache = null;
+    cachedAuthPrincipal = undefined;
   }
 
   private async request<T>(
