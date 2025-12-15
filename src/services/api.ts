@@ -97,6 +97,10 @@ interface ApiUser {
 
 // ----------------------------------------------------------------------
 
+// Auth cache - cache for 10 seconds to avoid repeated calls
+let authCache: { principal: SwaClientPrincipal | null; timestamp: number } | null = null;
+const AUTH_CACHE_TTL = 10000; // 10 seconds
+
 class ApiService {
   private baseUrl: string;
 
@@ -104,28 +108,36 @@ class ApiService {
     this.baseUrl = baseUrl;
   }
 
-  // Get SWA auth info - NO CACHING, always fetch fresh
+  // Get SWA auth info - cached for 10 seconds
   async getSwaAuth(): Promise<SwaClientPrincipal | null> {
+    // Return cached value if still valid
+    if (authCache && Date.now() - authCache.timestamp < AUTH_CACHE_TTL) {
+      return authCache.principal;
+    }
+
     try {
       console.log('[Auth] Fetching /.auth/me');
       const response = await fetch('/.auth/me', { credentials: 'include' });
       if (!response.ok) {
         console.log('[Auth] /.auth/me failed:', response.status);
+        authCache = { principal: null, timestamp: Date.now() };
         return null;
       }
       
       const data: SwaAuthResponse = await response.json();
       console.log('[Auth] Got clientPrincipal:', data.clientPrincipal ? 'yes' : 'null');
+      authCache = { principal: data.clientPrincipal, timestamp: Date.now() };
       return data.clientPrincipal;
     } catch (err) {
       console.log('[Auth] Error fetching /.auth/me:', err);
+      authCache = { principal: null, timestamp: Date.now() };
       return null;
     }
   }
 
-  // Clear cached auth (no-op now, kept for compatibility)
+  // Clear cached auth
   clearAuthCache(): void {
-    // No caching anymore
+    authCache = null;
   }
 
   private async request<T>(

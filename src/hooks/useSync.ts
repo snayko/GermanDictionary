@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiService, localWordToApiSync, apiWordToLocal } from '../services/api';
 import { db } from '../db';
 
@@ -7,6 +7,9 @@ import { db } from '../db';
 const SYNC_INTERVAL = 30000; // 30 seconds
 const LAST_SYNC_KEY = 'germandict_last_sync';
 const SYNC_ENABLED = import.meta.env.VITE_ENABLE_SYNC === 'true';
+
+// Prevent multiple simultaneous syncs
+let isSyncInProgress = false;
 
 // ----------------------------------------------------------------------
 
@@ -75,6 +78,12 @@ export function useSyncStatus() {
 
   // Sync local words with server
   const syncWithServer = useCallback(async (): Promise<boolean> => {
+    // Prevent multiple simultaneous syncs
+    if (isSyncInProgress) {
+      console.log('[Sync] Already syncing, skipping');
+      return false;
+    }
+
     console.log('[Sync] syncWithServer called', { isOnline, SYNC_ENABLED });
     
     if (!isOnline || !SYNC_ENABLED) {
@@ -92,6 +101,7 @@ export function useSyncStatus() {
     }
     console.log('[Sync] Authenticated as:', swaAuth.userDetails);
 
+    isSyncInProgress = true;
     setIsSyncing(true);
     setSyncError(null);
 
@@ -152,6 +162,7 @@ export function useSyncStatus() {
       setSyncError(message);
       return false;
     } finally {
+      isSyncInProgress = false;
       setIsSyncing(false);
     }
   }, [isOnline, lastSyncedAt]);
@@ -214,21 +225,24 @@ export function useSyncStatus() {
     return () => clearInterval(interval);
   }, [isOnline, isApiAvailable, currentUser, syncWithServer]);
 
-  // Initial health check
+  // Initial health check - only once on mount
+  const hasInitialized = useRef(false);
   useEffect(() => {
-    checkApiHealth();
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      checkApiHealth();
+    }
   }, [checkApiHealth]);
 
-  // Initial sync when API becomes available and user is authenticated
+  // Initial sync when API becomes available - only once
+  const hasSynced = useRef(false);
   useEffect(() => {
-    if (isApiAvailable && SYNC_ENABLED && currentUser && !lastSyncedAt) {
-      // First time - fetch all from server
-      fetchFromServer();
-    } else if (isApiAvailable && SYNC_ENABLED && currentUser) {
-      // Subsequent - sync changes
+    if (isApiAvailable && SYNC_ENABLED && !hasSynced.current) {
+      hasSynced.current = true;
+      // Always sync when first available - syncWithServer handles empty DB case
       syncWithServer();
     }
-  }, [isApiAvailable]);
+  }, [isApiAvailable, syncWithServer]);
 
   return {
     isOnline,
