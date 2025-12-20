@@ -57,9 +57,9 @@ export default function WordView({ word }: WordViewProps) {
 
         {/* Word Type & Level */}
         <Stack direction="row" spacing={1} sx={{ mb: 3 }}>
-          <Chip label={getWordTypeLabel()} size="small" color="primary" variant="soft" />
+          <Chip label={getWordTypeLabel()} size="small" color="primary" variant="filled" />
           {word.frequencyLevel && (
-            <Chip label={word.frequencyLevel} size="small" color="info" variant="soft" />
+            <Chip label={word.frequencyLevel} size="small" color="info" variant="filled" />
           )}
         </Stack>
 
