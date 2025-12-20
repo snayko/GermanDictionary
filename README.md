@@ -1,6 +1,6 @@
 # React + TypeScript + Vite
 
-This template provides a minimal setup to get React 18 working in Vite with HMR and some ESLint rules.
+This template provides a minimal setup to get React 18/19 working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:
 
