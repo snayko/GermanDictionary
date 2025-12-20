@@ -16,7 +16,7 @@ import InputAdornment from '@mui/material/InputAdornment';
 import { Icon } from '@iconify/react';
 
 import { useResponsive } from '../../hooks/useResponsive';
-import { FormProvider, RHFTextField, RHFSelect, RHFAutocomplete } from '../hook-form';
+import { FormProvider, RHFTextField, RHFSelect, RHFAutocomplete, RHFEditor } from '../hook-form';
 import type { Word, WordFormData } from '../../types';
 import { WORD_TYPES, GENDERS, FREQUENCY_LEVELS } from '../../types';
 
@@ -45,7 +45,7 @@ const WordSchema = Yup.object().shape({
   synonyms: Yup.array().of(Yup.string()),
   antonyms: Yup.array().of(Yup.string()),
   collocations: Yup.array().of(Yup.string()),
-  notes: Yup.string().trim(),
+  notes: Yup.string(),
   imageUrl: Yup.string().url().nullable(),
 }).test(
   'at-least-one-translation',
@@ -350,13 +350,14 @@ export default function WordNewEditForm({ currentWord, onSubmit, onCancel }: Wor
               helperText="Common word combinations (e.g., 'einen Fehler machen')"
             />
 
-            <RHFTextField
-              name="notes"
-              label="Notes"
-              placeholder="Any additional notes, grammar hints, memory tricks..."
-              multiline
-              rows={4}
-            />
+            <Stack spacing={1.5}>
+              <Typography variant="subtitle2">Notes</Typography>
+              <RHFEditor
+                name="notes"
+                placeholder="Any additional notes, grammar hints, memory tricks... You can add images, videos, formatting and more."
+                simple
+              />
+            </Stack>
 
             <RHFTextField
               name="imageUrl"

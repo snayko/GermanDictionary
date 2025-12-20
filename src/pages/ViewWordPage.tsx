@@ -7,23 +7,20 @@ import Button from '@mui/material/Button';
 import Skeleton from '@mui/material/Skeleton';
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
-import Grid from '@mui/material/Grid';
 import { Icon } from '@iconify/react';
 import { useSnackbar } from 'notistack';
 
-import WordNewEditForm from '../components/words/WordNewEditForm';
+import WordView from '../components/words/WordView';
 import { useSyncedWords } from '../hooks/useSyncedWords';
-import { useResponsive } from '../hooks/useResponsive';
-import type { Word, WordFormData } from '../types';
+import type { Word } from '../types';
 
 // ----------------------------------------------------------------------
 
-export default function EditWordPage() {
+export default function ViewWordPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
-  const { getWord, updateWord } = useSyncedWords();
-  const mdUp = useResponsive('up', 'md');
+  const { getWord } = useSyncedWords();
 
   const [word, setWord] = useState<Word | null>(null);
   const [loadingWord, setLoadingWord] = useState(true);
@@ -54,47 +51,35 @@ export default function EditWordPage() {
     loadWord();
   }, [id, getWord, navigate, enqueueSnackbar]);
 
-  const handleSubmit = async (data: WordFormData) => {
-    if (!id) return;
-
-    try {
-      await updateWord(id, data);
-      enqueueSnackbar('Word updated successfully!', { variant: 'success' });
-      navigate(`/word/${id}`);
-    } catch {
-      enqueueSnackbar('Failed to update word', { variant: 'error' });
-    }
+  const handleEdit = () => {
+    navigate(`/edit/${id}`);
   };
 
-  const handleCancel = () => {
-    navigate(`/word/${id}`);
+  const handleBack = () => {
+    navigate('/');
   };
 
   if (loadingWord) {
     return (
-      <Container maxWidth="lg" sx={{ pb: 4 }}>
-        <Skeleton variant="text" width={200} height={40} sx={{ mb: 1 }} />
-        <Skeleton variant="text" width={300} height={24} sx={{ mb: 4 }} />
-        <Grid container spacing={3}>
-          {mdUp && <Grid size={{ md: 4 }} />}
-          <Grid size={{ xs: 12, md: 8 }}>
-            <Card sx={{ p: 3 }}>
-              <Stack spacing={3}>
-                <Skeleton variant="rounded" height={56} />
-                <Skeleton variant="rounded" height={56} />
-                <Skeleton variant="rounded" height={100} />
-                <Skeleton variant="rounded" height={56} />
-              </Stack>
-            </Card>
-          </Grid>
-        </Grid>
+      <Container maxWidth="sm" sx={{ pb: 4 }}>
+        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 3 }}>
+          <Skeleton variant="circular" width={40} height={40} />
+          <Skeleton variant="text" width={100} height={40} />
+        </Stack>
+        <Card sx={{ p: 3 }}>
+          <Stack spacing={2}>
+            <Skeleton variant="text" width="60%" height={48} />
+            <Skeleton variant="rounded" height={32} width={100} />
+            <Skeleton variant="rounded" height={80} />
+          </Stack>
+        </Card>
       </Container>
     );
   }
 
   if (!word) {
     return (
-      <Container maxWidth="lg" sx={{ pb: 4 }}>
+      <Container maxWidth="sm" sx={{ pb: 4 }}>
         <Box sx={{ textAlign: 'center', py: 8 }}>
           <Icon icon="solar:file-corrupted-bold-duotone" width={64} style={{ opacity: 0.5 }} />
           <Typography variant="h6" sx={{ mt: 2 }}>
@@ -102,9 +87,9 @@ export default function EditWordPage() {
           </Typography>
           <Button
             variant="contained"
+            onClick={handleBack}
             startIcon={<Icon icon="solar:arrow-left-bold" />}
-            onClick={() => navigate('/')}
-            sx={{ mt: 3 }}
+            sx={{ mt: 2 }}
           >
             Back to Dictionary
           </Button>
@@ -114,15 +99,33 @@ export default function EditWordPage() {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ pb: 4 }}>
-      <Typography variant="h4" sx={{ mb: 1 }}>
-        Edit Word
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
-        Editing "{word.german}"
-      </Typography>
+    <Container maxWidth="sm" sx={{ pb: 4 }}>
+      {/* Header */}
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
+        sx={{ mb: 3 }}
+      >
+        <Button
+          color="inherit"
+          onClick={handleBack}
+          startIcon={<Icon icon="solar:arrow-left-bold" />}
+        >
+          Back
+        </Button>
 
-      <WordNewEditForm currentWord={word} onSubmit={handleSubmit} onCancel={handleCancel} />
+        <Button
+          variant="contained"
+          onClick={handleEdit}
+          startIcon={<Icon icon="solar:pen-bold" />}
+        >
+          Edit
+        </Button>
+      </Stack>
+
+      {/* Word View */}
+      <WordView word={word} />
     </Container>
   );
 }

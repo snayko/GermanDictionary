@@ -3,6 +3,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
 import DictionaryPage from './pages/DictionaryPage';
 import AddWordPage from './pages/AddWordPage';
+import ViewWordPage from './pages/ViewWordPage';
 import EditWordPage from './pages/EditWordPage';
 import SettingsPage from './pages/SettingsPage';
 
@@ -20,6 +21,10 @@ const router = createBrowserRouter([
       {
         path: 'add',
         element: <AddWordPage />,
+      },
+      {
+        path: 'word/:id',
+        element: <ViewWordPage />,
       },
       {
         path: 'edit/:id',

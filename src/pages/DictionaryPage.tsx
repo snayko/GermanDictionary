@@ -62,7 +62,7 @@ export default function DictionaryPage() {
   };
 
   const handleWordClick = (word: Word) => {
-    navigate(`/edit/${word.id}`);
+    navigate(`/word/${word.id}`);
   };
 
   const handleDeleteClick = (event: React.MouseEvent, word: Word) => {

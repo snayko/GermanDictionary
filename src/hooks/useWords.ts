@@ -90,6 +90,14 @@ export function useWords(options?: UseWordsOptions) {
     return cleaned.length > 0 ? cleaned : undefined;
   };
 
+  // Helper to clean HTML content from editor (check if it's empty)
+  const cleanHtmlContent = (html?: string): string | undefined => {
+    if (!html) return undefined;
+    // Quill returns '<p><br></p>' for empty content
+    const stripped = html.replace(/<[^>]*>/g, '').trim();
+    return stripped.length > 0 ? html : undefined;
+  };
+
   // Add a new word
   const addWord = useCallback(async (formData: WordFormData): Promise<Word> => {
     setIsLoading(true);
@@ -108,7 +116,7 @@ export function useWords(options?: UseWordsOptions) {
         synonyms: cleanStringArray(formData.synonyms),
         antonyms: cleanStringArray(formData.antonyms),
         collocations: cleanStringArray(formData.collocations),
-        notes: formData.notes?.trim() || undefined,
+        notes: cleanHtmlContent(formData.notes),
         imageUrl: formData.imageUrl?.trim() || undefined,
         createdAt: now,
         updatedAt: now,
@@ -153,7 +161,7 @@ export function useWords(options?: UseWordsOptions) {
         synonyms: cleanStringArray(formData.synonyms),
         antonyms: cleanStringArray(formData.antonyms),
         collocations: cleanStringArray(formData.collocations),
-        notes: formData.notes?.trim() || undefined,
+        notes: cleanHtmlContent(formData.notes),
         imageUrl: formData.imageUrl?.trim() || undefined,
         updatedAt: new Date().toISOString(),
       };
