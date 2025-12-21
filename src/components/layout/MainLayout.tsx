@@ -20,7 +20,7 @@ import { apiService } from '../../services/api';
 // ----------------------------------------------------------------------
 
 // App version - update this when deploying
-const APP_VERSION = '1.0.7';
+const APP_VERSION = '1.1.0';
 
 const NAV_ITEMS = [
   { label: 'Dictionary', icon: 'solar:book-bold', path: '/' },
@@ -94,6 +94,7 @@ export default function MainLayout() {
                 sx={{ 
                   fontWeight: 700,
                   lineHeight: 1.2,
+                  fontSize: { xs: '0.95rem', sm: '1.25rem' },
                   background: 'linear-gradient(90deg, #ffffff 0%, #C8FAD6 100%)',
                   backgroundClip: 'text',
                   WebkitBackgroundClip: 'text',
@@ -106,7 +107,7 @@ export default function MainLayout() {
                 variant="caption" 
                 sx={{ 
                   color: 'rgba(255,255,255,0.7)',
-                  fontSize: '0.65rem',
+                  fontSize: { xs: '0.55rem', sm: '0.65rem' },
                   letterSpacing: 1,
                   textTransform: 'uppercase',
                 }}
@@ -135,9 +136,16 @@ export default function MainLayout() {
               </Button>
             ) : (
               <>
-                {/* User email */}
+                {/* User email - hidden on mobile */}
                 {currentUser?.email && (
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.7rem' }}>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      color: 'rgba(255,255,255,0.8)', 
+                      fontSize: '0.7rem',
+                      display: { xs: 'none', sm: 'block' },
+                    }}
+                  >
                     {currentUser.email}
                   </Typography>
                 )}
@@ -177,8 +185,8 @@ export default function MainLayout() {
         component="main"
         sx={{
           flexGrow: 1,
-          pt: 8, // AppBar height
-          pb: 8, // BottomNav height
+          pt: { xs: 10, sm: 9 }, // AppBar height + extra spacing
+          pb: 10, // BottomNav height + extra spacing
           px: 2,
           bgcolor: 'background.default',
           minHeight: '100vh',

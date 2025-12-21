@@ -115,12 +115,14 @@ export default function EditWordPage() {
 
   return (
     <Container maxWidth="lg" sx={{ pb: 4 }}>
-      <Typography variant="h4" sx={{ mb: 1 }}>
-        Edit Word
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
-        Editing "{word.german}"
-      </Typography>
+      <Box sx={{ maxWidth: 720, mx: 'auto', mb: 4 }}>
+        <Typography variant="h4" sx={{ mb: 1 }}>
+          Edit Word
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Editing "{word.german}"
+        </Typography>
+      </Box>
 
       <WordNewEditForm currentWord={word} onSubmit={handleSubmit} onCancel={handleCancel} />
     </Container>

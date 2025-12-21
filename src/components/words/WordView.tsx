@@ -7,8 +7,26 @@ import Divider from '@mui/material/Divider';
 import { Icon } from '@iconify/react';
 
 import type { Word } from '../../types';
+import { SpeakButton } from '../speak-button';
 
 // ----------------------------------------------------------------------
+
+// CEFR level colors (similar to Longman dictionary notation)
+const getCefrColor = (level: string): string => {
+  switch (level) {
+    case 'A1':
+    case 'A2':
+      return '#D32F2F'; // Red - Basic/Beginner
+    case 'B1':
+    case 'B2':
+      return '#F57C00'; // Orange - Intermediate
+    case 'C1':
+    case 'C2':
+      return '#7B1FA2'; // Purple - Advanced
+    default:
+      return '#1976D2'; // Blue - default
+  }
+};
 
 interface WordViewProps {
   word: Word;
@@ -51,15 +69,35 @@ export default function WordView({ word }: WordViewProps) {
       {/* Main Word Card */}
       <Card sx={{ p: 3 }}>
         {/* German Word */}
-        <Typography variant="h3" sx={{ mb: 1 }}>
-          {getDisplayGerman()}
-        </Typography>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+          <Typography 
+            variant="h3"
+            sx={{ 
+              color: word.frequencyLevel ? getCefrColor(word.frequencyLevel) : 'text.primary',
+            }}
+          >
+            {getDisplayGerman()}
+          </Typography>
+          <SpeakButton 
+            text={word.german} 
+            size="medium" 
+            tooltip="Listen to German word"
+          />
+        </Stack>
 
         {/* Word Type & Level */}
         <Stack direction="row" spacing={1} sx={{ mb: 3 }}>
           <Chip label={getWordTypeLabel()} size="small" color="primary" variant="filled" />
           {word.frequencyLevel && (
-            <Chip label={word.frequencyLevel} size="small" color="info" variant="filled" />
+            <Chip 
+              label={word.frequencyLevel} 
+              size="small" 
+              sx={{ 
+                bgcolor: getCefrColor(word.frequencyLevel),
+                color: 'white',
+                fontWeight: 600,
+              }} 
+            />
           )}
         </Stack>
 
@@ -96,16 +134,29 @@ export default function WordView({ word }: WordViewProps) {
               </Typography>
               <Stack spacing={2}>
                 {word.examples!.map((example, index) => (
-                  <Box key={index} sx={{ pl: 2, borderLeft: 3, borderColor: 'primary.main' }}>
-                    <Typography variant="body1" sx={{ fontStyle: 'italic' }}>
-                      "{example.german}"
-                    </Typography>
-                    {example.translation && (
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                        {example.translation}
+                  <Stack 
+                    key={index} 
+                    direction="row" 
+                    alignItems="flex-start" 
+                    spacing={1}
+                    sx={{ pl: 2, borderLeft: 3, borderColor: 'primary.main' }}
+                  >
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="body1" sx={{ fontStyle: 'italic' }}>
+                        "{example.german}"
                       </Typography>
-                    )}
-                  </Box>
+                      {example.translation && (
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                          {example.translation}
+                        </Typography>
+                      )}
+                    </Box>
+                    <SpeakButton 
+                      text={example.german} 
+                      size="small" 
+                      tooltip="Listen to example sentence"
+                    />
+                  </Stack>
                 ))}
               </Stack>
             </Box>

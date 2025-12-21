@@ -27,6 +27,23 @@ import type { Word } from '../types';
 
 // ----------------------------------------------------------------------
 
+// CEFR level colors (similar to Longman dictionary notation)
+const getCefrColor = (level: string): string => {
+  switch (level) {
+    case 'A1':
+    case 'A2':
+      return '#D32F2F'; // Red - Basic/Beginner
+    case 'B1':
+    case 'B2':
+      return '#F57C00'; // Orange - Intermediate
+    case 'C1':
+    case 'C2':
+      return '#7B1FA2'; // Purple - Advanced
+    default:
+      return '#1976D2'; // Blue - default
+  }
+};
+
 export default function DictionaryPage() {
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
@@ -181,15 +198,26 @@ export default function DictionaryPage() {
                 <ListItemText
                   primary={
                     <Stack direction="row" alignItems="center" spacing={1}>
-                      <Typography variant="subtitle1" fontWeight={600}>
+                      <Typography 
+                        variant="subtitle1" 
+                        fontWeight={600}
+                        sx={{ 
+                          color: word.frequencyLevel ? getCefrColor(word.frequencyLevel) : 'text.primary',
+                        }}
+                      >
                         {getDisplayGerman(word)}
                       </Typography>
                       {word.frequencyLevel && (
                         <Chip
                           label={word.frequencyLevel}
                           size="small"
-                          color="primary"
-                          variant="outlined"
+                          sx={{
+                            bgcolor: getCefrColor(word.frequencyLevel),
+                            color: 'white',
+                            fontWeight: 600,
+                            fontSize: '0.7rem',
+                            height: 20,
+                          }}
                         />
                       )}
                     </Stack>

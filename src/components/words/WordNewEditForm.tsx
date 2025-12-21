@@ -7,16 +7,13 @@ import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
-import Grid from '@mui/material/Grid';
-import CardHeader from '@mui/material/CardHeader';
 import Typography from '@mui/material/Typography';
 import LoadingButton from '@mui/lab/LoadingButton';
 import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
 import { Icon } from '@iconify/react';
-
-import { useResponsive } from '../../hooks/useResponsive';
 import { FormProvider, RHFTextField, RHFSelect, RHFAutocomplete, RHFEditor } from '../hook-form';
+import { SpeakButton } from '../speak-button';
 import type { Word, WordFormData } from '../../types';
 import { WORD_TYPES, GENDERS, FREQUENCY_LEVELS } from '../../types';
 
@@ -65,7 +62,6 @@ interface WordNewEditFormProps {
 }
 
 export default function WordNewEditForm({ currentWord, onSubmit, onCancel }: WordNewEditFormProps) {
-  const mdUp = useResponsive('up', 'md');
 
   const defaultValues = useMemo<WordFormData>(
     () => ({
@@ -130,37 +126,30 @@ export default function WordNewEditForm({ currentWord, onSubmit, onCancel }: Wor
   // DETAILS SECTION - German word, translations, examples
   // ----------------------------------------------------------------------
   const renderDetails = (
-    <>
-      {mdUp && (
-        <Grid size={{ md: 4 }}>
-          <Typography variant="h6" sx={{ mb: 0.5 }}>
-            Word Details
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            German word, translations, example sentences...
-          </Typography>
-        </Grid>
-      )}
-
-      <Grid size={{ xs: 12, md: 8 }}>
-        <Card>
-          {!mdUp && <CardHeader title="Word Details" />}
-
-          <Stack spacing={3} sx={{ p: 3 }}>
+    <Card>
+      <Stack spacing={3} sx={{ p: 3 }}>
             {/* German Word */}
-            <RHFTextField
-              name="german"
-              label="German Word"
-              placeholder="e.g., Haus, laufen, schön"
-              autoFocus
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Icon icon="circle-flags:de" width={24} />
-                  </InputAdornment>
-                ),
-              }}
-            />
+            <Stack direction="row" spacing={1} alignItems="center">
+              <RHFTextField
+                name="german"
+                label="German Word"
+                placeholder="e.g., Haus, laufen, schön"
+                autoFocus
+                sx={{ flex: 1 }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Icon icon="circle-flags:de" width={24} />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              <SpeakButton 
+                text={watch('german') || ''} 
+                size="medium" 
+                tooltip="Listen to German word"
+              />
+            </Stack>
 
             {/* Word Type & Gender */}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
@@ -256,7 +245,12 @@ export default function WordNewEditForm({ currentWord, onSubmit, onCancel }: Wor
                 {fields.map((field, index) => (
                   <Card key={field.id} variant="outlined" sx={{ p: 2 }}>
                     <Stack spacing={1.5}>
-                      <Stack direction="row" spacing={1} alignItems="flex-start">
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <SpeakButton 
+                          text={watch(`examples.${index}.german`) || ''} 
+                          size="small" 
+                          tooltip="Listen to example sentence"
+                        />
                         <RHFTextField
                           name={`examples.${index}.german`}
                           label="German sentence"
@@ -267,17 +261,18 @@ export default function WordNewEditForm({ currentWord, onSubmit, onCancel }: Wor
                         <IconButton
                           color="error"
                           onClick={() => remove(index)}
-                          sx={{ mt: 0.5 }}
                         >
                           <Icon icon="mingcute:delete-2-line" width={20} />
                         </IconButton>
                       </Stack>
-                      <RHFTextField
-                        name={`examples.${index}.translation`}
-                        label="Translation (optional)"
-                        placeholder="e.g., The house is big."
-                        size="small"
-                      />
+                      <Box sx={{ pl: 5, pr: 5.5 }}> {/* Align with text field above (icon width + spacing on both sides) */}
+                        <RHFTextField
+                          name={`examples.${index}.translation`}
+                          label="Translation (optional)"
+                          placeholder="e.g., The house is big."
+                          size="small"
+                        />
+                      </Box>
                     </Stack>
                   </Card>
                 ))}
@@ -290,121 +285,99 @@ export default function WordNewEditForm({ currentWord, onSubmit, onCancel }: Wor
               </Stack>
             </Box>
           </Stack>
-        </Card>
-      </Grid>
-    </>
+    </Card>
   );
 
   // ----------------------------------------------------------------------
   // PROPERTIES SECTION - Frequency, synonyms, notes, etc.
   // ----------------------------------------------------------------------
   const renderProperties = (
-    <>
-      {mdUp && (
-        <Grid size={{ md: 4 }}>
-          <Typography variant="h6" sx={{ mb: 0.5 }}>
-            Properties
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            Level, related words, notes...
-          </Typography>
-        </Grid>
-      )}
+    <Card>
+      <Stack spacing={3} sx={{ p: 3 }}>
+        <RHFSelect
+          name="frequencyLevel"
+          label="CEFR Level (optional)"
+          options={[{ value: '', label: 'Not specified' }, ...FREQUENCY_LEVELS]}
+          helperText="Common European Framework of Reference level"
+        />
 
-      <Grid size={{ xs: 12, md: 8 }}>
-        <Card>
-          {!mdUp && <CardHeader title="Properties" />}
+        <RHFAutocomplete
+          name="synonyms"
+          label="Synonyms"
+          placeholder="+ Add synonym"
+          multiple
+          freeSolo
+          helperText="Related German words with similar meaning"
+        />
 
-          <Stack spacing={3} sx={{ p: 3 }}>
-            <RHFSelect
-              name="frequencyLevel"
-              label="CEFR Level (optional)"
-              options={[{ value: '', label: 'Not specified' }, ...FREQUENCY_LEVELS]}
-              helperText="Common European Framework of Reference level"
-            />
+        <RHFAutocomplete
+          name="antonyms"
+          label="Antonyms"
+          placeholder="+ Add antonym"
+          multiple
+          freeSolo
+          helperText="German words with opposite meaning"
+        />
 
-            <RHFAutocomplete
-              name="synonyms"
-              label="Synonyms"
-              placeholder="+ Add synonym"
-              multiple
-              freeSolo
-              helperText="Related German words with similar meaning"
-            />
+        <RHFAutocomplete
+          name="collocations"
+          label="Collocations"
+          placeholder="+ Add collocation"
+          multiple
+          freeSolo
+          helperText="Common word combinations (e.g., 'einen Fehler machen')"
+        />
 
-            <RHFAutocomplete
-              name="antonyms"
-              label="Antonyms"
-              placeholder="+ Add antonym"
-              multiple
-              freeSolo
-              helperText="German words with opposite meaning"
-            />
+        <Stack spacing={1.5}>
+          <Typography variant="subtitle2">Notes</Typography>
+          <RHFEditor
+            name="notes"
+            placeholder="Any additional notes, grammar hints, memory tricks... You can add images, videos, formatting and more."
+            simple
+          />
+        </Stack>
 
-            <RHFAutocomplete
-              name="collocations"
-              label="Collocations"
-              placeholder="+ Add collocation"
-              multiple
-              freeSolo
-              helperText="Common word combinations (e.g., 'einen Fehler machen')"
-            />
-
-            <Stack spacing={1.5}>
-              <Typography variant="subtitle2">Notes</Typography>
-              <RHFEditor
-                name="notes"
-                placeholder="Any additional notes, grammar hints, memory tricks... You can add images, videos, formatting and more."
-                simple
-              />
-            </Stack>
-
-            <RHFTextField
-              name="imageUrl"
-              label="Image URL (optional)"
-              placeholder="https://example.com/image.jpg"
-              helperText="URL to an image that helps remember the word"
-            />
-          </Stack>
-        </Card>
-      </Grid>
-    </>
+        <RHFTextField
+          name="imageUrl"
+          label="Image URL (optional)"
+          placeholder="https://example.com/image.jpg"
+          helperText="URL to an image that helps remember the word"
+        />
+      </Stack>
+    </Card>
   );
 
   // ----------------------------------------------------------------------
   // ACTIONS
   // ----------------------------------------------------------------------
   const renderActions = (
-    <>
-      {mdUp && <Grid size={{ md: 4 }} />}
-      <Grid size={{ xs: 12, md: 8 }} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2 }}>
-        {onCancel && (
-          <Button color="inherit" variant="outlined" size="large" onClick={onCancel}>
-            Cancel
-          </Button>
-        )}
+    <Stack direction="row" justifyContent="flex-end" spacing={2}>
+      {onCancel && (
+        <Button color="inherit" variant="outlined" size="large" onClick={onCancel}>
+          Cancel
+        </Button>
+      )}
 
-        <LoadingButton
-          type="submit"
-          variant="contained"
-          size="large"
-          loading={isSubmitting}
-        >
-          {!currentWord ? 'Create Word' : 'Save Changes'}
-        </LoadingButton>
-      </Grid>
-    </>
+      <LoadingButton
+        type="submit"
+        variant="contained"
+        size="large"
+        loading={isSubmitting}
+      >
+        {!currentWord ? 'Create Word' : 'Save Changes'}
+      </LoadingButton>
+    </Stack>
   );
 
   return (
     <FormProvider methods={methods} onSubmit={handleFormSubmit}>
-      <Grid container spacing={3}>
+      <Stack spacing={3} sx={{ maxWidth: 720, mx: 'auto' }}>
         {renderDetails}
 
         {renderProperties}
 
         {renderActions}
-      </Grid>
+      </Stack>
     </FormProvider>
   );
 }

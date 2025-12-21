@@ -232,6 +232,39 @@ class ApiService {
       body: JSON.stringify(request),
     });
   }
+
+  async textToSpeech(text: string): Promise<Blob> {
+    const url = `${this.baseUrl}/tts`;
+    
+    // Get SWA auth info
+    const authInfo = await this.getSwaAuth();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    // If we have SWA auth, encode and send as header
+    if (authInfo) {
+      const principalData = JSON.stringify({ clientPrincipal: authInfo });
+      headers['X-Ms-Client-Principal'] = btoa(principalData);
+      headers['X-Ms-Client-Principal-Id'] = authInfo.userId;
+      headers['X-Ms-Client-Principal-Name'] = authInfo.userDetails;
+      headers['X-Ms-Client-Principal-Idp'] = authInfo.identityProvider;
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      credentials: 'include',
+      body: JSON.stringify({ text }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `HTTP error ${response.status}`);
+    }
+
+    return response.blob();
+  }
 }
 
 // ----------------------------------------------------------------------

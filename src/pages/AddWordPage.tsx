@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import { useSnackbar } from 'notistack';
@@ -30,12 +31,14 @@ export default function AddWordPage() {
 
   return (
     <Container maxWidth="lg" sx={{ pb: 4 }}>
-      <Typography variant="h4" sx={{ mb: 1 }}>
-        Add New Word
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
-        Add a new German word to your dictionary
-      </Typography>
+      <Box sx={{ maxWidth: 720, mx: 'auto', mb: 4 }}>
+        <Typography variant="h4" sx={{ mb: 1 }}>
+          Add New Word
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Add a new German word to your dictionary
+        </Typography>
+      </Box>
 
       <WordNewEditForm onSubmit={handleSubmit} onCancel={handleCancel} />
     </Container>
